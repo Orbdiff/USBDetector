@@ -315,6 +315,50 @@ int WINAPI WinMain
                 }
             }
         } else {
+            static bool showUSBHelpPopup = false;
+
+            float buttonSize = 32.0f;
+
+            ImVec2 winPos = ImGui::GetWindowPos();
+            ImVec2 winSize = ImGui::GetWindowSize();
+
+            ImGui::SetCursorScreenPos(ImVec2(winPos.x + winSize.x - buttonSize - 10.0f, winPos.y + 10.0f));
+
+            if (ImGui::Button("?", ImVec2(buttonSize, buttonSize)))
+            {
+                showUSBHelpPopup = true;
+                ImGui::OpenPopup("USBHelp");
+            }
+
+            ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+            ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+            ImGui::SetNextWindowSize(ImVec2(450, 220), ImGuiCond_Appearing);
+
+            ImGui::SetNextWindowSizeConstraints(ImVec2(700, 300), ImVec2(900, 400));
+            ImGui::SetNextWindowBgAlpha(0.90f);
+
+            if (ImGui::BeginPopupModal("USBHelp",&showUSBHelpPopup, 0))
+            {
+                float titleWidth = ImGui::CalcTextSize("Tysm for using!").x;
+                ImGui::SetCursorPosX((ImGui::GetWindowSize().x - titleWidth) * 0.5f);
+                ImGui::Text("Tysm for using!");
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                ImGui::TextWrapped("This table shows the USB devices detected on the system.");
+                ImGui::Spacing();
+
+                ImGui::Bullet(); ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Mass Storage devices are highlighted in red.");
+                ImGui::Bullet(); ImGui::Text("Right-click a USB in the 'Device Names' column to search it in ur browser.");
+                ImGui::Bullet(); ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "The search is performed via DeviceHunt, so it may sometimes fail.");
+
+                ImGui::Spacing();
+                ImGui::Separator();
+
+                ImGui::EndPopup();
+            }
+
             if (ImGui::BeginTable("USBDevicesTable", 7, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_Sortable | ImGuiTableFlags_SizingFixedFit))
             {
                 ImGui::TableSetupColumn("Device Name", ImGuiTableColumnFlags_WidthStretch, 0.0f, 0);
@@ -425,8 +469,14 @@ int WINAPI WinMain
                     {
                         if (ImGui::Selectable("Search USB"))
                         {
-                            std::string searchQuery = "https://www.google.com/search?q=" + dev.DeviceName + "+" + dev.VendorName;
-                            ShellExecuteW(NULL, L"open", std::wstring(searchQuery.begin(), searchQuery.end()).c_str(), NULL, NULL, SW_SHOWNORMAL);
+                            size_t slashPos = dev.vidpid.find(" / ");
+                            if (slashPos != std::string::npos)
+                            {
+                                std::string vendor = dev.vidpid.substr(0, slashPos);
+                                std::string device = dev.vidpid.substr(slashPos + 3);
+                                std::string searchUrl = "https://devicehunt.com/view/type/usb/vendor/" + vendor + "/device/" + device;
+                                ShellExecuteW(NULL, L"open", std::wstring(searchUrl.begin(), searchUrl.end()).c_str(), NULL, NULL, SW_SHOWNORMAL);
+                            }
                         }
                         ImGui::EndPopup();
                     }
